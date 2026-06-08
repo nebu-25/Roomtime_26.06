@@ -1,0 +1,592 @@
+# Roomtime_26.06
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROOMTINE — 루틴이 쌓이면, 방이 완성된다</title>
+    <!-- 가독성을 위한 Pretendard 폰트 로드 -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        /* 브랜드 컬러 및 타이포그래피 시스템 적용 */
+        :root {
+            --bg-main: #F5EFE0;       /* Warm Ivory */
+            --sub-green: #8BAF8E;     /* Sage Green */
+            --key-terracotta: #C97B5A;/* Terracotta */
+            --assist-lavender: #B8A9C9;/* Dusty Lavender */
+            --text-dark: #3D3530;     /* Warm Charcoal */
+            --white: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+            color: var(--text-dark);
+        }
+
+        body {
+            background-color: #EFE9DB;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* 메인 앱 컨테이너 */
+        .app-container {
+            background-color: var(--bg-main);
+            width: 100%;
+            max-width: 480px;
+            height: 850px;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(61, 53, 48, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            border: 4px solid var(--text-dark);
+        }
+
+        /* 상단 헤더 */
+        header {
+            padding: 24px 20px 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-main);
+            z-index: 10;
+        }
+
+        header h1 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        /* 상단 유저 재화 정보 */
+        .status-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .coin-badge {
+            background-color: var(--white);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: 2px solid var(--text-dark);
+        }
+
+        /* 메인 콘텐츠 영역 (스크롤 가능) */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 3-3. 방(Room) 시각화 시스템 */
+        .room-display {
+            background-color: var(--white);
+            height: 260px;
+            border-radius: 24px;
+            border: 3px solid var(--text-dark);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.5s ease;
+        }
+
+        /* 생활감 시스템: 시간대별 배경색 채도 변화 */
+        .room-display.morning { background-color: #FFFDF6; }
+        .room-display.afternoon { background-color: #FDF9EE; }
+        .room-display.evening { background-color: #F0E2D0; }
+        .room-display.night { background-color: #2D3250; }
+        .room-display.night * { color: #FFF; }
+
+        /* 방 내부 오브젝트 레이아웃 */
+        .room-interior {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            padding: 20px;
+            gap: 15px;
+            align-items: center;
+            justify-items: center;
+        }
+
+        .grid-item {
+            font-size: 36px;
+            transition: all 0.3s ease;
+            position: relative;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 생활감 시스템: 미완료 시 먼지 및 어수선함 표현 */
+        .room-display.messy .grid-item {
+            transform: rotate(15deg) translateY(5px);
+            filter: grayscale(0.4);
+        }
+        .room-display.messy::after {
+            content: '💤 어수선...';
+            position: absolute;
+            bottom: 10px;
+            left: 15px;
+            font-size: 12px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        /* 시스템 메시지 (브랜드 보이스 반영) */
+        .brand-message {
+            background-color: var(--white);
+            padding: 14px 18px;
+            border-radius: 16px;
+            border-left: 5px solid var(--key-terracotta);
+            font-size: 13.5px;
+            line-height: 1.5;
+            font-weight: 500;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        /* 섹션 타이틀 */
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 3-4. 루틴 리스트 UI */
+        .routine-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .routine-item {
+            background-color: var(--white);
+            padding: 16px;
+            border-radius: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .routine-item.checked {
+            border-color: var(--sub-green);
+            background-color: #F1F7F2;
+        }
+
+        .routine-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .routine-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+        }
+
+        .routine-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .routine-tag {
+            font-size: 11px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        /* 체크 버튼 컴포넌트 */
+        .check-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2.5px solid #DDD;
+            background: var(--white);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .routine-item.checked .check-btn {
+            background-color: var(--sub-green);
+            border-color: var(--sub-green);
+            color: white;
+        }
+
+        /* 3-3. 상점 (가구 인벤토리) UI */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .shop-item {
+            background: var(--white);
+            padding: 12px;
+            border-radius: 16px;
+            text-align: center;
+            border: 2px solid #EAEAEA;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .shop-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--key-terracotta);
+        }
+
+        .shop-item.purchased {
+            border-color: var(--text-dark);
+            background: #FFF;
+        }
+
+        .shop-item.placed {
+            background: #F5EFE0;
+            border-color: var(--key-terracotta);
+        }
+
+        .shop-item .item-emoji {
+            font-size: 28px;
+            margin-bottom: 6px;
+        }
+
+        .shop-item .item-name {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .shop-item .item-cost {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--key-terracotta);
+        }
+
+        .badge-placed {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--key-terracotta);
+            color: white;
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        /* 하단 탭 바 */
+        .bottom-nav {
+            height: 70px;
+            background-color: var(--white);
+            border-top: 3px solid var(--text-dark);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            opacity: 0.5;
+        }
+
+        .nav-item.active {
+            opacity: 1;
+            color: var(--key-terracotta);
+        }
+
+        .nav-item span {
+            font-size: 20px;
+        }
+
+        /* 커스텀 토스트 알림 */
+        .toast {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--text-dark);
+            color: var(--white);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 100;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- 상단 토스트 알림 기능 -->
+        <div id="toast" class="toast">가구가 방에 배치되었습니다! ✨</div>
+
+        <!-- 헤더 바 -->
+        <header>
+            <h1>ROOMTINE</h1>
+            <div class="status-bar">
+                <div class="coin-badge">
+                    🪙 <span id="coin-count">10</span>
+                </div>
+                <div class="coin-badge" style="background-color: var(--assist-lavender); color: white; border-color: var(--text-dark);">
+                    🔥 <span id="streak-count">3</span>일째
+                </div>
+            </div>
+        </header>
+
+        <!-- 메인 스크롤 콘텐츠 -->
+        <div class="content">
+            
+            <!-- 3-3. 방(Room) 공간 시각화 화면 -->
+            <div id="room-screen" class="room-display afternoon messy">
+                <div class="room-interior" id="room-interior">
+                    <!-- 구매 및 배치한 가구들이 이곳에 실시간 렌더링됩니다 -->
+                </div>
+            </div>
+
+            <!-- 6-7. 브랜드 보이스 시스템 알림판 -->
+            <div class="brand-message" id="brand-message">
+                방이 조금 기다리고 있어요. 내일도 괜찮아요 🌙
+            </div>
+
+            <!-- 3-4. 오늘의 루틴 섹션 -->
+            <div class="routine-section">
+                <div class="section-title">
+                    <span>오늘의 루틴 목록</span>
+                    <span style="font-size: 12px; color: var(--sub-green); font-weight: 500;">완료 시 🪙+10</span>
+                </div>
+                <div class="routine-list" id="routine-list">
+                    <!-- 루틴 스크립트 삽입 위치 -->
+                </div>
+            </div>
+
+            <!-- 3-3. 가구 상점 & 인벤토리 섹션 -->
+            <div class="shop-section">
+                <div class="section-title">코지 가구 상점</div>
+                <div class="shop-grid" id="shop-grid">
+                    <!-- 아이템 스크립트 삽입 위치 -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 3-5. 하단 가짜 네비게이션 탭 (확장성 구현) -->
+        <div class="bottom-nav">
+            <div class="nav-item active">
+                <span>🏠</span>내 방
+            </div>
+            <div class="nav-item" onclick="showToast('소셜 기능은 준비 중입니다! 🔗')">
+                <span>🌍</span>둘러보기
+            </div>
+            <div class="nav-item" onclick="showToast('통계 화면은 준비 중입니다! 📊')">
+                <span>📅</span>리포트
+            </div>
+            <div class="nav-item" onclick="showToast('설정 화면은 준비 중입니다! ⚙️')">
+                <span>👤</span>마이
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 초기 상태 데이터 정의 ---
+        let userState = {
+            coins: 10,
+            streak: 3,
+            routines: [
+                { id: 1, name: "아침 공복 물 한 잔", category: "식습관", icon: "💧", checked: false },
+                { id: 2, name: "스트레칭 10분", category: "운동", icon: "🧘", checked: false },
+                { id: 3, name: "독서 또는 학습 20분", category: "공부", icon: "📚", checked: false }
+            ],
+            shopItems: [
+                { id: 'bed', name: '아늑한 침대', emoji: '🛏️', cost: 10, purchased: false, placed: false },
+                { id: 'desk', name: '원목 책상', emoji: '🪵', cost: 20, purchased: false, placed: false },
+                { id: 'plant', name: '몬스테라 화분', emoji: '🪴', cost: 10, purchased: false, placed: false },
+                { id: 'lamp', name: '감성 무드등', emoji: '💡', cost: 15, purchased: false, placed: false },
+                { id: 'sofa', name: '푹신한 소파', emoji: '🛋️', cost: 30, purchased: false, placed: false },
+                { id: 'carpet', name: '체크무늬 러그', emoji: '🧺', cost: 15, purchased: false, placed: false }
+            ]
+        };
+
+        // --- 2. 렌더링 엔진 코어 ---
+        function renderApp() {
+            // 상단 계정 정보 동기화
+            document.getElementById('coin-count').innerText = userState.coins;
+            document.getElementById('streak-count').innerText = userState.streak;
+
+            // 3-4. 루틴 리스트 UI 빌드
+            const routineListHTML = userState.routines.map(r => `
+                <div class="routine-item ${r.checked ? 'checked' : ''}">
+                    <div class="routine-info">
+                        <div class="routine-icon" style="background-color: var(--bg-main);">${r.icon}</div>
+                        <div>
+                            <div class="routine-name">${r.name}</div>
+                            <div class="routine-tag">#${r.category}</div>
+                        </div>
+                    </div>
+                    <button class="check-btn" onclick="toggleRoutine(${r.id})">
+                        ${r.checked ? '✓' : ''}
+                    </button>
+                </div>
+            `).join('');
+            document.getElementById('routine-list').innerHTML = routineListHTML;
+
+            // 3-3. 상점 가구 리스트 UI 빌드
+            const shopGridHTML = userState.shopItems.map(item => {
+                let statusText = `🪙 ${item.cost}`;
+                if (item.placed) statusText = '배치됨';
+                else if (item.purchased) statusText = '보유중';
+
+                return `
+                    <div class="shop-item ${item.purchased ? 'purchased' : ''} ${item.placed ? 'placed' : ''}" onclick="handleShopClick('${item.id}')">
+                        ${item.placed ? '<span class="badge-placed">배치</span>' : ''}
+                        <div class="item-emoji">${item.emoji}</div>
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-cost" style="${item.purchased ? 'color: var(--sub-green);' : ''}">${statusText}</div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('shop-grid').innerHTML = shopGridHTML;
+
+            // 3-3. 방 내부 인테리어 레이아웃 업데이트 및 생활감 시스템 동기화
+            const roomScreen = document.getElementById('room-screen');
+            const roomInterior = document.getElementById('room-interior');
+            
+            // 모든 루틴이 완료되었는지 체크
+            const allChecked = userState.routines.every(r => r.checked);
+            
+            if (allChecked) {
+                roomScreen.classList.remove('messy');
+                document.getElementById('brand-message').innerHTML = "오늘도 잘했어요 🏠 방이 조금 더 빛나고 있어요 ✨";
+            } else {
+                roomScreen.classList.add('messy');
+                document.getElementById('brand-message').innerHTML = "방이 조금 기다리고 있어요. 내일도 괜찮아요 🌙";
+            }
+
+            // 배치된 가구 가상 공간에 렌더링
+            const placedItems = userState.shopItems.filter(i => i.placed);
+            let interiorHTML = '';
+            // 최대 6개의 공간 그리드 배치 설계
+            for(let i=0; i<6; i++) {
+                if(placedItems[i]) {
+                    interiorHTML += `<div class="grid-item">${placedItems[i].emoji}</div>`;
+                } else {
+                    interiorHTML += `<div class="grid-item" style="font-size:14px; opacity:0.15;">+</div>`;
+                }
+            }
+            roomInterior.innerHTML = interiorHTML;
+        }
+
+        // --- 3. 인터랙션 및 비즈니스 로직 제어 ---
+        
+        // 3-2. 루틴 토글 핸들러 (핵심 게임 루프 반영)
+        function toggleRoutine(id) {
+            const routine = userState.routines.find(r => r.id === id);
+            if (routine) {
+                routine.checked = !routine.checked;
+                if (routine.checked) {
+                    userState.coins += 10; // 루틴 달성 기본 코인 지급
+                    showToast("루틴 완료! 🪙 +10 코인을 획득했습니다.");
+                } else {
+                    userState.coins = Math.max(0, userState.coins - 10);
+                }
+                renderApp();
+            }
+        }
+
+        // 3-3. 가구 구매 및 배치 원클릭 시스템 핸들러
+        function handleShopClick(itemId) {
+            const item = userState.shopItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            // 조건 1: 아직 구매하지 않은 가구 아이템인 경우
+            if (!item.purchased) {
+                if (userState.coins >= item.cost) {
+                    userState.coins -= item.cost;
+                    item.purchased = true;
+                    item.placed = true; // 구매 직후 자동 배치 트리거
+                    showToast(`🛒 ${item.name}을 구매하여 방에 배치했습니다!`);
+                } else {
+                    showToast("❌ 코지가 부족합니다! 루틴을 완료해 코인을 모으세요.");
+                }
+            } 
+            // 조건 2: 이미 구매 완료하여 인벤토리에 있고, 현재 미배치 상태일 때
+            else if (item.purchased && !item.placed) {
+                item.placed = true;
+                showToast(`✨ ${item.name}을 방에 다시 배치했습니다.`);
+            } 
+            // 조건 3: 이미 배치되어 있는 가구를 터치하여 인벤토리로 보관(철거)할 때
+            else if (item.placed) {
+                item.placed = false;
+                showToast(`📦 ${item.name}을 인벤토리에 보관했습니다.`);
+            }
+            renderApp();
+        }
+
+        // 글로벌 알림 시스템 컴포넌트
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        // 앱 초기 구동 실행
+        renderApp();
+    </script>
+</body>
+</html>
